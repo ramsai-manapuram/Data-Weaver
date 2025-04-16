@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
@@ -39,9 +40,14 @@ public class DataWeaverService {
         Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
 
         Workbook outputWorkbook = new XSSFWorkbook();
-
-        addSummaryPage(sourceSheet, outputWorkbook, employeeNames);
-        addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year);
+        CellStyle borderStyle = outputWorkbook.createCellStyle();
+        borderStyle.setBorderTop(BorderStyle.THIN);
+        borderStyle.setBorderBottom(BorderStyle.THIN);
+        borderStyle.setBorderLeft(BorderStyle.THIN);
+        borderStyle.setBorderRight(BorderStyle.THIN);
+        
+        addSummaryPage(sourceSheet, outputWorkbook, employeeNames, borderStyle);
+        addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year, borderStyle);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputWorkbook.write(outputStream);
@@ -50,32 +56,60 @@ public class DataWeaverService {
         return outputBytes;
     }
 
-    private void addSummaryPage(Sheet sourceSheet, Workbook outputWorkbook, Map<String, Double> employeeNames) {
+    private void addSummaryPage(Sheet sourceSheet, Workbook outputWorkbook, Map<String, Double> employeeNames, CellStyle borderStyle) {
         Sheet outputSheet = outputWorkbook.createSheet("Summary");
         String[] summaryColumns = {"Names", "Hours", "New/Existing"};
         addColumns(summaryColumns, outputSheet);
         fillSummarySheet(sourceSheet, outputSheet, employeeNames);
         fitColumnContent(summaryColumns.length, outputSheet);
-        applyHeadingColour(outputWorkbook, outputSheet, summaryColumns.length);
+        addBorders(outputSheet, borderStyle, summaryColumns.length);
+        applyColour(outputWorkbook, outputSheet, summaryColumns.length, 0, IndexedColors.LIGHT_BLUE.getIndex());
     }
 
-    private void addEachTimeSheet(Workbook outputWorkbook, Map<String, Double> employeeNames, Sheet sourceSheet, int month, int year) {
+    private void addEachTimeSheet(Workbook outputWorkbook, Map<String, Double> employeeNames, Sheet sourceSheet, int month, int year, CellStyle style) {
         String[] columns = {"Name", "Date", "Title", "Description", "Project Time"};
-
         for (String name: employeeNames.keySet()) {
             Sheet currentSheet = outputWorkbook.createSheet(name);
             addColumns(columns, currentSheet);
-            addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
+            addEachPersonSheetData(outputWorkbook, style, sourceSheet, currentSheet, name, month, year, columns.length);
             fitColumnContent(columns.length, currentSheet);
-            applyHeadingColour(outputWorkbook, currentSheet, columns.length);
+            addBorders(currentSheet, style, columns.length);
+            applyColour(outputWorkbook, currentSheet, columns.length, 0, IndexedColors.LIGHT_BLUE.getIndex());
+            updateWeekendColour(outputWorkbook, currentSheet, columns.length);
         } 
     }
 
-    private void applyHeadingColour(Workbook outputWorkbook, Sheet sheet, int length) {
+    private void addBorders(Sheet sheet, CellStyle style, int totalColumns) {
+        for (Row row: sheet) {
+            for (int column = 0; column < totalColumns; column++) {
+                if (row.getCell(column) != null) {
+                    row.getCell(column).setCellStyle(style);
+                }
+            }
+        }
+    }
+
+    private void updateWeekendColour(Workbook workbook, Sheet sheet, int length) {
+        int rowIndex = 0;
+        for (Row row: sheet) {
+            if (rowIndex == 0) {
+                rowIndex++;
+                continue;
+            }
+            Cell cell = row.getCell(1);
+            LocalDate date = LocalDate.parse(cell.toString());
+            if (isWeekend(date)) {
+                applyColour(workbook, sheet, length, rowIndex, IndexedColors.GREEN.getIndex());
+            }
+            rowIndex++;
+        }
+    }
+
+    private void applyColour(Workbook outputWorkbook, Sheet sheet, int length, int rowIndex, short colourIndex) {
         CellStyle style = outputWorkbook.createCellStyle();
-        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillForegroundColor(colourIndex);
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
-        Row firstRow = sheet.getRow(0);
+        Row firstRow = sheet.getRow(rowIndex);
         for (int column = 0; column < length; column++) {
             Cell cell = firstRow.getCell(column);
             cell.setCellStyle(style);
@@ -88,7 +122,7 @@ public class DataWeaverService {
         }
     }
 
-    private void addEachPersonSheetData(Sheet sourceSheet, Sheet destinationSheet, String name, int month, int year) {
+    private void addEachPersonSheetData(Workbook outputWorkbook, CellStyle style, Sheet sourceSheet, Sheet destinationSheet, String name, int month, int year, int length) {
         LocalDate firstDate = LocalDate.of(year, month, 1);
         LocalDate lastDate = firstDate.withDayOfMonth(firstDate.lengthOfMonth());
 
@@ -106,9 +140,8 @@ public class DataWeaverService {
             
             if (!isWeekend(date)) {
                 titleCell.setCellValue("Development");
-            }
+            } 
         }
-
         updateDescriptionAndHours(sourceSheet, destinationSheet, name);
     }
 
@@ -129,6 +162,13 @@ public class DataWeaverService {
             
             int getDay = getDayFromDate(dateCell.toString());
             Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
+            Cell projectTimeCell = destinationSheet.getRow(getDay).getCell(4);
+            Double hours = Double.parseDouble(row.getCell(6).toString());
+            Double existingHours = 0.0;
+            
+            if (projectTimeCell.toString().length() > 0) {
+                existingHours = Double.parseDouble(projectTimeCell.toString());
+            }
             String existingTask = descriptionCell.toString();
 
             String newTask = row.getCell(5).toString();
@@ -139,7 +179,9 @@ public class DataWeaverService {
             if (existingTask.length() > 0) {
                 existingTask += ", ";
             }
-           
+            existingHours += hours;
+            projectTimeCell.setCellValue(existingHours);
+
             existingTask += newTask;
             descriptionCell.setCellValue(existingTask);
         }
@@ -182,12 +224,17 @@ public class DataWeaverService {
         Row blankRow = destinationSheet.createRow(rowIndex++);
         Cell blankCell = blankRow.createCell(0);
 
+        Cell secondCell = blankRow.createCell(1);
+        Cell thirdCell = blankRow.createCell(2);
+
         Row totalHoursRow = destinationSheet.createRow(rowIndex++);
         Cell totalHoursFirstCol = totalHoursRow.createCell(0);
         totalHoursFirstCol.setCellValue("Total Hours");
 
         Cell totalHoursSecondCol = totalHoursRow.createCell(1);
         totalHoursSecondCol.setCellValue(Integer.toString(totalHours));
+
+        Cell blankThirdCol = totalHoursRow.createCell(2);
     }
 
     private void addColumns(String[] columns, Sheet sheet) {
