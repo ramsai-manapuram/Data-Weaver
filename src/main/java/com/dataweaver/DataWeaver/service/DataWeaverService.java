@@ -15,10 +15,15 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.dataweaver.DataWeaver.exception.CustomException;
+
 @Service
 public class DataWeaverService {
 
-    public byte[] generateExcel(MultipartFile file) throws IOException {
+    public byte[] generateExcel(MultipartFile file, int month, int year) throws IOException {
+        if (month < 1 || month > 12) {
+            throw new CustomException("Invalid month passed");
+        }
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
         Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
@@ -34,7 +39,7 @@ public class DataWeaverService {
         for (String name: employeeNames.keySet()) {
             Sheet currentSheet = outputWorkbook.createSheet(name);
             addColumns(columns, currentSheet);
-            addEachPersonSheetData(sourceSheet, currentSheet, name);
+            addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
         }
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -44,8 +49,8 @@ public class DataWeaverService {
         return outputBytes;
     }
 
-    private void addEachPersonSheetData(Sheet sourceSheet, Sheet destinationSheet, String name) {
-        LocalDate firstDate = LocalDate.of(2025, 3, 1);
+    private void addEachPersonSheetData(Sheet sourceSheet, Sheet destinationSheet, String name, int month, int year) {
+        LocalDate firstDate = LocalDate.of(year, month, 1);
         LocalDate lastDate = firstDate.withDayOfMonth(firstDate.lengthOfMonth());
 
         int rowIndex = 1;
