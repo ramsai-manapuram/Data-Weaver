@@ -27,39 +27,43 @@ public class DataWeaverService {
     public byte[] generateExcel(MultipartFile file, int month, int year) throws IOException {
         if (month < 1 || month > 12) {
             throw new CustomException("Invalid month passed");
+        } 
+        if (year < 2000 || year > 2050) {
+            throw new CustomException("Invalid year passed");
         }
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
         Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
-        Map<String, Integer> sheetsIndex = new HashMap<>();
 
         Workbook outputWorkbook = new XSSFWorkbook();
         Sheet outputSheet = outputWorkbook.createSheet("Summary");
 
-        int sheetIndex = 0;
-        sheetsIndex.put("Summary", sheetIndex);
-        String[] summaryColumns = {"Names", "Hours", "New/Existing"};
-        addColumns(summaryColumns, outputSheet);
-        fillSummarySheet(sourceSheet, outputSheet, employeeNames);
-        fitColumnContent(summaryColumns.length, outputSheet);
-
-        String[] columns = {"Name", "Date", "Title", "Description", "Project Time"};
-
-        for (String name: employeeNames.keySet()) {
-            Sheet currentSheet = outputWorkbook.createSheet(name);
-            addColumns(columns, currentSheet);
-            addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
-            sheetsIndex.put(name, sheetIndex);
-            fitColumnContent(columns.length, currentSheet);
-        }
-
-        
+        addSummaryPage(sourceSheet, outputSheet, employeeNames);
+        addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputWorkbook.write(outputStream);
         byte[] outputBytes = outputStream.toByteArray();
 
         return outputBytes;
+    }
+
+    private void addSummaryPage(Sheet sourceSheet, Sheet outputSheet, Map<String, Double> employeeNames) {
+        String[] summaryColumns = {"Names", "Hours", "New/Existing"};
+        addColumns(summaryColumns, outputSheet);
+        fillSummarySheet(sourceSheet, outputSheet, employeeNames);
+        fitColumnContent(summaryColumns.length, outputSheet);
+    }
+
+    private void addEachTimeSheet(Workbook outputWorkbook, Map<String, Double> employeeNames, Sheet sourceSheet, int month, int year) {
+        String[] columns = {"Name", "Date", "Title", "Description", "Project Time"};
+
+        for (String name: employeeNames.keySet()) {
+            Sheet currentSheet = outputWorkbook.createSheet(name);
+            addColumns(columns, currentSheet);
+            addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
+            fitColumnContent(columns.length, currentSheet);
+        }
     }
 
     private void fitColumnContent(int length, Sheet sheet) {
@@ -177,35 +181,6 @@ public class DataWeaverService {
             Cell cell = row.createCell(columnIndex++);
             cell.setCellValue(column);
         }
-    }
-
-    private String getCellData(Cell cell) {
-        String cellValue = "";
-        switch (cell.getCellType()) {
-            case STRING:
-                cellValue = cell.getStringCellValue();
-                break;
-
-            case NUMERIC:
-                cellValue = String.valueOf(cell.getNumericCellValue());
-                break;
-
-            case BOOLEAN:
-                cellValue = String.valueOf(cell.getBooleanCellValue());
-                break;
-
-            case BLANK:
-                cellValue = "";
-                break;
-
-            case ERROR:
-                cellValue = "Error";
-                break;
-
-            default:
-                cellValue = "Unknown";
-        }
-        return cellValue;
     }
 
     private Map<String, Double> findAllEmployeeNames(Sheet sheet) {
