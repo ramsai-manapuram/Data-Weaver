@@ -12,6 +12,9 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -36,9 +39,8 @@ public class DataWeaverService {
         Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
 
         Workbook outputWorkbook = new XSSFWorkbook();
-        Sheet outputSheet = outputWorkbook.createSheet("Summary");
 
-        addSummaryPage(sourceSheet, outputSheet, employeeNames);
+        addSummaryPage(sourceSheet, outputWorkbook, employeeNames);
         addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year);
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -48,11 +50,13 @@ public class DataWeaverService {
         return outputBytes;
     }
 
-    private void addSummaryPage(Sheet sourceSheet, Sheet outputSheet, Map<String, Double> employeeNames) {
+    private void addSummaryPage(Sheet sourceSheet, Workbook outputWorkbook, Map<String, Double> employeeNames) {
+        Sheet outputSheet = outputWorkbook.createSheet("Summary");
         String[] summaryColumns = {"Names", "Hours", "New/Existing"};
         addColumns(summaryColumns, outputSheet);
         fillSummarySheet(sourceSheet, outputSheet, employeeNames);
         fitColumnContent(summaryColumns.length, outputSheet);
+        applyHeadingColour(outputWorkbook, outputSheet, summaryColumns.length);
     }
 
     private void addEachTimeSheet(Workbook outputWorkbook, Map<String, Double> employeeNames, Sheet sourceSheet, int month, int year) {
@@ -63,6 +67,18 @@ public class DataWeaverService {
             addColumns(columns, currentSheet);
             addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
             fitColumnContent(columns.length, currentSheet);
+            applyHeadingColour(outputWorkbook, currentSheet, columns.length);
+        } 
+    }
+
+    private void applyHeadingColour(Workbook outputWorkbook, Sheet sheet, int length) {
+        CellStyle style = outputWorkbook.createCellStyle();
+        style.setFillForegroundColor(IndexedColors.LIGHT_BLUE.getIndex());
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+        Row firstRow = sheet.getRow(0);
+        for (int column = 0; column < length; column++) {
+            Cell cell = firstRow.getCell(column);
+            cell.setCellStyle(style);
         }
     }
 
