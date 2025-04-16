@@ -10,12 +10,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
-import org.apache.poi.ss.usermodel.Font;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -38,7 +38,7 @@ public class DataWeaverService {
         }
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
-        Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
+        TreeMap<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
 
         Workbook outputWorkbook = new XSSFWorkbook();
         CellStyle borderStyle = outputWorkbook.createCellStyle();
@@ -181,7 +181,8 @@ public class DataWeaverService {
                 existingTask += ", ";
             }
             existingHours += hours;
-            projectTimeCell.setCellValue(existingHours);
+            // if we want a cumulative sum of hours spent, then just replace with existingHours
+            projectTimeCell.setCellValue("8");
 
             existingTask += newTask;
             descriptionCell.setCellValue(existingTask);
@@ -247,8 +248,8 @@ public class DataWeaverService {
         }
     }
 
-    private Map<String, Double> findAllEmployeeNames(Sheet sheet) {
-        Map<String, Double> store = new HashMap<>();
+    private TreeMap<String, Double> findAllEmployeeNames(Sheet sheet) {
+        TreeMap<String, Double> store = new TreeMap<>();
 
         for (Row row: sheet) {
             Cell cell = row.getCell(1);
