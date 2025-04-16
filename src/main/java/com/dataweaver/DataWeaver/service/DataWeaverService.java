@@ -2,12 +2,10 @@ package com.dataweaver.DataWeaver.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -36,6 +34,7 @@ public class DataWeaverService {
         for (String name: employeeNames.keySet()) {
             Sheet currentSheet = outputWorkbook.createSheet(name);
             addColumns(columns, currentSheet);
+            addEachPersonSheetData(sourceSheet, currentSheet, name);
         }
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -43,6 +42,30 @@ public class DataWeaverService {
         byte[] outputBytes = outputStream.toByteArray();
 
         return outputBytes;
+    }
+
+    private void addEachPersonSheetData(Sheet sourceSheet, Sheet destinationSheet, String name) {
+        LocalDate firstDate = LocalDate.of(2025, 3, 1);
+        LocalDate lastDate = firstDate.withDayOfMonth(firstDate.lengthOfMonth());
+
+        int rowIndex = 1;
+        for (LocalDate date = firstDate; !date.isAfter(lastDate); date = date.plusDays(1)) {
+            Row row = destinationSheet.createRow(rowIndex++);
+            Cell nameCell = row.createCell(0);
+            nameCell.setCellValue(name);
+            Cell dateCell = row.createCell(1);
+            dateCell.setCellValue(date.toString());
+            Cell titleCell = row.createCell(2);
+            
+            if (!isWeekend(date)) {
+                titleCell.setCellValue("Development");
+            }
+        }
+    }
+
+    private boolean isWeekend(LocalDate date) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        return dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
     }
 
     private void fillSummarySheet(Sheet sourceSheet, Sheet destinationSheet, Map<String, Double> employeeNames) {
