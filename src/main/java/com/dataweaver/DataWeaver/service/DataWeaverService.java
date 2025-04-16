@@ -4,8 +4,12 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -27,12 +31,17 @@ public class DataWeaverService {
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
         Map<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
+        Map<String, Integer> sheetsIndex = new HashMap<>();
 
         Workbook outputWorkbook = new XSSFWorkbook();
         Sheet outputSheet = outputWorkbook.createSheet("Summary");
+
+        int sheetIndex = 0;
+        sheetsIndex.put("Summary", sheetIndex);
         String[] summaryColumns = {"Names", "Hours", "New/Existing"};
         addColumns(summaryColumns, outputSheet);
         fillSummarySheet(sourceSheet, outputSheet, employeeNames);
+        fitColumnContent(summaryColumns.length, outputSheet);
 
         String[] columns = {"Name", "Date", "Title", "Description", "Project Time"};
 
@@ -40,13 +49,23 @@ public class DataWeaverService {
             Sheet currentSheet = outputWorkbook.createSheet(name);
             addColumns(columns, currentSheet);
             addEachPersonSheetData(sourceSheet, currentSheet, name, month, year);
+            sheetsIndex.put(name, sheetIndex);
+            fitColumnContent(columns.length, currentSheet);
         }
+
+        
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputWorkbook.write(outputStream);
         byte[] outputBytes = outputStream.toByteArray();
 
         return outputBytes;
+    }
+
+    private void fitColumnContent(int length, Sheet sheet) {
+        for (int column = 0; column < length; column++) {
+            sheet.autoSizeColumn(column);
+        }
     }
 
     private void addEachPersonSheetData(Sheet sourceSheet, Sheet destinationSheet, String name, int month, int year) {
@@ -61,10 +80,59 @@ public class DataWeaverService {
             Cell dateCell = row.createCell(1);
             dateCell.setCellValue(date.toString());
             Cell titleCell = row.createCell(2);
+
+            Cell descriptionCell = row.createCell(3);
+            Cell projectTimeCell = row.createCell(4);
             
             if (!isWeekend(date)) {
                 titleCell.setCellValue("Development");
             }
+        }
+
+        updateDescriptionAndHours(sourceSheet, destinationSheet, name);
+    }
+
+    private void updateDescriptionAndHours(Sheet sourceSheet, Sheet destinationSheet, String name) {
+        boolean isFirstRow = true;
+        Set<String> allTasks = new HashSet<>();
+
+        for (Row row: sourceSheet) {
+            if (isFirstRow) {
+                isFirstRow = false;
+                continue;
+            }
+            
+            if (!name.equals(row.getCell(1).toString())) {
+                continue;
+            }
+            Cell dateCell = row.getCell(3);
+            
+            int getDay = getDayFromDate(dateCell.toString());
+            Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
+            String existingTask = descriptionCell.toString();
+
+            String newTask = row.getCell(5).toString();
+            if (allTasks.contains(newTask)) {
+                continue;
+            }
+            allTasks.add(newTask);
+            if (existingTask.length() > 0) {
+                existingTask += ", ";
+            }
+           
+            existingTask += newTask;
+            descriptionCell.setCellValue(existingTask);
+        }
+    }
+
+    private int getDayFromDate(String date) {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+        try {
+            LocalDate parsedDate = LocalDate.parse(date, formatter);
+            return parsedDate.getDayOfMonth();
+        } catch (DateTimeParseException e) {
+            System.out.println("Invalid date format: " + date);
+            throw e;
         }
     }
 
