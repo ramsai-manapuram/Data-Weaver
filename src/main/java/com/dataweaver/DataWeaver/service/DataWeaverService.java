@@ -6,6 +6,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -15,9 +16,11 @@ import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.FillPatternType;
+import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -45,6 +48,10 @@ public class DataWeaverService {
         borderStyle.setBorderBottom(BorderStyle.MEDIUM);
         borderStyle.setBorderLeft(BorderStyle.MEDIUM);
         borderStyle.setBorderRight(BorderStyle.MEDIUM);
+
+        borderStyle.setAlignment(HorizontalAlignment.CENTER);
+        borderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
+        borderStyle.setWrapText(true);
                 
         addSummaryPage(sourceSheet, outputWorkbook, employeeNames, borderStyle);
         addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year, borderStyle);
@@ -98,8 +105,14 @@ public class DataWeaverService {
             }
             Cell cell = row.getCell(1);
             LocalDate date = LocalDate.parse(cell.toString());
+
+            Cell descriptionCell = row.getCell(3);
+
             if (isWeekend(date)) {
                 applyColour(workbook, sheet, length, rowIndex, IndexedColors.GREEN.getIndex());
+            } else if (descriptionCell.toString().equals("")) {
+                descriptionCell.setCellValue("On Leave");
+                applyColour(workbook, sheet, length, rowIndex, IndexedColors.SKY_BLUE.getIndex());
             }
             rowIndex++;
         }
@@ -111,8 +124,12 @@ public class DataWeaverService {
         style.setBorderBottom(BorderStyle.MEDIUM);
         style.setBorderLeft(BorderStyle.MEDIUM);
         style.setBorderRight(BorderStyle.MEDIUM);
+        style.setAlignment(HorizontalAlignment.CENTER);
+        style.setVerticalAlignment(VerticalAlignment.CENTER);
+        style.setWrapText(true);
         style.setFillForegroundColor(colourIndex);
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
+
         Row firstRow = sheet.getRow(rowIndex);
         for (int column = 0; column < length; column++) {
             Cell cell = firstRow.getCell(column);
