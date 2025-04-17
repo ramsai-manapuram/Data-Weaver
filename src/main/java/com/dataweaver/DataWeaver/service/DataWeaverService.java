@@ -6,7 +6,6 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -42,11 +41,11 @@ public class DataWeaverService {
 
         Workbook outputWorkbook = new XSSFWorkbook();
         CellStyle borderStyle = outputWorkbook.createCellStyle();
-        borderStyle.setBorderTop(BorderStyle.THIN);
-        borderStyle.setBorderBottom(BorderStyle.THIN);
-        borderStyle.setBorderLeft(BorderStyle.THIN);
-        borderStyle.setBorderRight(BorderStyle.THIN);
-        
+        borderStyle.setBorderTop(BorderStyle.MEDIUM);
+        borderStyle.setBorderBottom(BorderStyle.MEDIUM);
+        borderStyle.setBorderLeft(BorderStyle.MEDIUM);
+        borderStyle.setBorderRight(BorderStyle.MEDIUM);
+                
         addSummaryPage(sourceSheet, outputWorkbook, employeeNames, borderStyle);
         addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year, borderStyle);
 
@@ -108,6 +107,10 @@ public class DataWeaverService {
 
     private void applyColour(Workbook outputWorkbook, Sheet sheet, int length, int rowIndex, short colourIndex) {
         CellStyle style = outputWorkbook.createCellStyle();
+        style.setBorderTop(BorderStyle.MEDIUM);
+        style.setBorderBottom(BorderStyle.MEDIUM);
+        style.setBorderLeft(BorderStyle.MEDIUM);
+        style.setBorderRight(BorderStyle.MEDIUM);
         style.setFillForegroundColor(colourIndex);
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         Row firstRow = sheet.getRow(rowIndex);
