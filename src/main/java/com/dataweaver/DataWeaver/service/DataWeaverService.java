@@ -16,6 +16,7 @@ import java.util.TreeMap;
 import org.apache.poi.ss.usermodel.BorderStyle;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.FillPatternType;
 import org.apache.poi.ss.usermodel.HorizontalAlignment;
 import org.apache.poi.ss.usermodel.IndexedColors;
@@ -42,6 +43,10 @@ public class DataWeaverService {
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
         TreeMap<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
+        
+        // for (Map.Entry<String, Double> entry: employeeNames.entrySet()) {
+        //     System.out.println(entry.getKey() + " " + entry.getValue());
+        // }
 
         Workbook outputWorkbook = new XSSFWorkbook();
         CellStyle borderStyle = outputWorkbook.createCellStyle();
@@ -268,23 +273,89 @@ public class DataWeaverService {
         }
     }
 
+    private int findEmployeeNameIndex(Sheet sheet) {
+        Row firstRow = sheet.getRow(0);
+        int columnIndex = 0;
+        for (Cell column: firstRow) {
+            if (column.toString().equals("Emp Name")) {
+                return columnIndex;
+            }
+            columnIndex++;
+        }
+
+        return -1;
+    }
+
+    private int findTotalHoursIndex(Sheet sheet) {
+        Row firstRow = sheet.getRow(0);
+        int columnIndex = 0;
+        for (Cell column: firstRow) {
+            if (column.toString().equals("Total Hours")) {
+                return columnIndex;
+            }
+            columnIndex++;
+        }
+
+        return -1;
+    }
+
     private TreeMap<String, Double> findAllEmployeeNames(Sheet sheet) {
         TreeMap<String, Double> store = new TreeMap<>();
+        int empNameIndex = findEmployeeNameIndex(sheet);
+        int totalHoursIndex = findTotalHoursIndex(sheet);
+
         for (Row row: sheet) {
-            Cell cell = row.getCell(1);
+            Cell cell = row.getCell(empNameIndex);
             if (cell == null)   continue;
-            Cell hoursCell = row.getCell(6);
+            Cell hoursCell = row.getCell(totalHoursIndex);
             String name = cell.toString();
 
+
             if (cell != null && !name.equals("Emp Name") && hoursCell != null) {
+                String hours = getCellValue(hoursCell);
+                double hoursDouble = findHoursInDouble(hours);
                 // double hours = LocalTime.parse(hoursCell.toString()).getHour();
                 // System.out.println("Hours: " + hours);
-                double hours = Double.parseDouble(hoursCell.toString());
-                store.put(name, store.getOrDefault(name, 0.0) + hours);
+                // double hours = Double.parseDouble(hoursCell.toString());
+                store.put(name, store.getOrDefault(name, 0.0) + hoursDouble);
             }
         }
 
         return store;
+    }
+
+    private double findHoursInDouble(String hours) {
+        int index = hours.indexOf(':');
+        if (index != -1) {
+            double result = Double.parseDouble(hours.substring(index - 2, index));
+            int minutes = Integer.parseInt(hours.substring(index + 1, index + 3));
+            if (minutes == 15) {
+                result += 0.3;
+            } else if (minutes == 30) {
+                result += 0.5;
+            } else if (minutes == 45) {
+                result += 0.75;
+            }
+            return result;
+        }
+
+        return Double.parseDouble(hours);
+    }
+
+    private String getCellValue(Cell cell) {
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    return cell.getDateCellValue().toString();
+                } else {
+                    return String.valueOf(cell.getNumericCellValue());
+                }
+            default:
+                break;
+        }
+        return "";
     }
 
 }
