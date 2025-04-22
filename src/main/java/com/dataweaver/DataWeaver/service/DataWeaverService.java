@@ -4,6 +4,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
@@ -52,10 +53,9 @@ public class DataWeaverService {
         borderStyle.setAlignment(HorizontalAlignment.CENTER);
         borderStyle.setVerticalAlignment(VerticalAlignment.CENTER);
         borderStyle.setWrapText(true);
-                
+
         addSummaryPage(sourceSheet, outputWorkbook, employeeNames, borderStyle);
         addEachTimeSheet(outputWorkbook, employeeNames, sourceSheet, month, year, borderStyle);
-
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         outputWorkbook.write(outputStream);
         byte[] outputBytes = outputStream.toByteArray();
@@ -270,13 +270,15 @@ public class DataWeaverService {
 
     private TreeMap<String, Double> findAllEmployeeNames(Sheet sheet) {
         TreeMap<String, Double> store = new TreeMap<>();
-
         for (Row row: sheet) {
             Cell cell = row.getCell(1);
+            if (cell == null)   continue;
             Cell hoursCell = row.getCell(6);
             String name = cell.toString();
 
-            if (cell != null && !name.equals("Emp Name")) {
+            if (cell != null && !name.equals("Emp Name") && hoursCell != null) {
+                // double hours = LocalTime.parse(hoursCell.toString()).getHour();
+                // System.out.println("Hours: " + hours);
                 double hours = Double.parseDouble(hoursCell.toString());
                 store.put(name, store.getOrDefault(name, 0.0) + hours);
             }
