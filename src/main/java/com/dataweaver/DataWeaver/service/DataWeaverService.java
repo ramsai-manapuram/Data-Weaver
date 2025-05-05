@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -301,6 +302,7 @@ public class DataWeaverService {
 
     private TreeMap<String, Double> findAllEmployeeNames(Sheet sheet) {
         TreeMap<String, Double> store = new TreeMap<>();
+        Map<String, Set<Integer>> visited = new HashMap<>();
         int empNameIndex = findEmployeeNameIndex(sheet);
         int totalHoursIndex = findTotalHoursIndex(sheet);
 
@@ -312,12 +314,24 @@ public class DataWeaverService {
 
 
             if (cell != null && !name.equals("Emp Name") && hoursCell != null) {
+
+                Cell dateCell = row.getCell(3);
+            
+                int day = getDayFromDate(dateCell.toString());
+
+                if (visited.containsKey(name) && visited.get(name).contains(day)) {
+                    continue;
+                }
                 String hours = getCellValue(hoursCell);
                 double hoursDouble = findHoursInDouble(hours);
                 // double hours = LocalTime.parse(hoursCell.toString()).getHour();
                 // System.out.println("Hours: " + hours);
                 // double hours = Double.parseDouble(hoursCell.toString());
-                store.put(name, store.getOrDefault(name, 0.0) + hoursDouble);
+                store.put(name, store.getOrDefault(name, 0.0) + 8.0);
+                if (!visited.containsKey(name)) {
+                    visited.put(name, new HashSet<>());
+                }
+                visited.get(name).add(day);
             }
         }
 
