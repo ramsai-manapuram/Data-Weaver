@@ -28,20 +28,22 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.dataweaver.DataWeaver.exception.CustomException;
 
 @Service
 public class DataWeaverService {
 
-    public byte[] generateExcel(MultipartFile file, int month, int year) throws IOException {
-        if (month < 1 || month > 12) {
-            throw new CustomException("Invalid month passed");
-        } 
-        if (year < 2000 || year > 2050) {
-            throw new CustomException("Invalid year passed");
-        }
+    public byte[] generateExcel(MultipartFile file) throws IOException {
+       
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+        Cell cell = sourceSheet.getRow(1).getCell(3);
+        LocalDate date = LocalDate.parse(cell.toString(), formatter);
+
+        int month = date.getMonth().getValue();
+        int year = date.getYear();
+
         TreeMap<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
         
         // for (Map.Entry<String, Double> entry: employeeNames.entrySet()) {
@@ -171,46 +173,74 @@ public class DataWeaverService {
         updateDescriptionAndHours(sourceSheet, destinationSheet, name);
     }
 
+    private int findColumnIndex(Sheet sourceSheet, String fieldName) {
+        Row row = sourceSheet.getRow(0);
+        int columnIndex = 0;
+        for (Cell cell: row) {
+            if (cell.toString().equals(fieldName)) {
+                return columnIndex;
+            }
+            columnIndex++;
+        }
+        return -1;
+    }
+
+    private String findNameFromSheet(Sheet sourceSheet, int rowIndex) {
+        int colIndex = findColumnIndex(sourceSheet, "Emp Name");
+        return sourceSheet.getRow(rowIndex).getCell(colIndex).toString();
+    }
+
+    private Cell findDateFromSheet(Sheet sourceSheet, int rowIndex) {
+        int colIndex = findColumnIndex(sourceSheet, "Date");
+        return sourceSheet.getRow(rowIndex).getCell(colIndex);
+    }
+
+    private String findDescriptionFromSheet(Sheet sourceSheet, int rowIndex) {
+        int colIndex = findColumnIndex(sourceSheet, "Description");
+        return sourceSheet.getRow(rowIndex).getCell(colIndex).toString();
+    }
+
     private void updateDescriptionAndHours(Sheet sourceSheet, Sheet destinationSheet, String name) {
         boolean isFirstRow = true;
         Set<String> allTasks = new HashSet<>();
 
-        for (Row row: sourceSheet) {
-            if (isFirstRow) {
-                isFirstRow = false;
-                continue;
-            }
-            
-            if (!name.equals(row.getCell(1).toString())) {
-                continue;
-            }
-            Cell dateCell = row.getCell(3);
-            
-            int getDay = getDayFromDate(dateCell.toString());
-            Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
-            Cell projectTimeCell = destinationSheet.getRow(getDay).getCell(4);
-            Double hours = Double.parseDouble(row.getCell(6).toString());
-            Double existingHours = 0.0;
-            
-            if (projectTimeCell.toString().length() > 0) {
-                existingHours = Double.parseDouble(projectTimeCell.toString());
-            }
-            String existingTask = descriptionCell.toString();
+        int rowCount = sourceSheet.getPhysicalNumberOfRows();
 
-            String newTask = row.getCell(5).toString();
-            if (allTasks.contains(newTask)) {
-                continue;
-            }
-            allTasks.add(newTask);
-            if (existingTask.length() > 0) {
-                existingTask += ", ";
-            }
-            existingHours += hours;
-            // if we want a cumulative sum of hours spent, then just replace with existingHours
-            projectTimeCell.setCellValue("8");
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+            Row row = sourceSheet.getRow(rowIndex);
+            if (row == null)    continue;
 
-            existingTask += newTask;
-            descriptionCell.setCellValue(existingTask);
+            int colCount = row.getPhysicalNumberOfCells();
+
+            for (int colIndex = 0; colIndex < colCount; colIndex++) {
+                Cell cell = row.getCell(colIndex);
+                if (cell == null)   continue;
+
+                String namePresent = findNameFromSheet(sourceSheet, rowIndex);
+                if (!namePresent.equals(name)) {
+                    continue;
+                }
+
+                Cell dateCell = findDateFromSheet(sourceSheet, rowIndex);
+                int getDay = getDayFromDate(dateCell.toString());
+                Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
+                Cell projectTimeCell = destinationSheet.getRow(getDay).getCell(4);
+
+                String existingTask = descriptionCell.toString();
+                String newTask = findDescriptionFromSheet(sourceSheet, rowIndex);
+                if (allTasks.contains(newTask)) {
+                    continue;
+                }
+                allTasks.add(newTask);
+                if (existingTask.length() > 0) {
+                    existingTask += ", ";
+                }
+
+                projectTimeCell.setCellValue("8");
+
+                existingTask += newTask;
+                descriptionCell.setCellValue(existingTask);
+            }
         }
     }
 

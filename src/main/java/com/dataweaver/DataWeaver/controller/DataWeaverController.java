@@ -25,8 +25,8 @@ public class DataWeaverController {
     }
 
     @PostMapping("/generate-excel")
-    public ResponseEntity<byte[]> generateExcel(@RequestParam("file") MultipartFile file, @RequestParam("month") int month, @RequestParam("year") int year) throws IOException {
-        byte[] outputBytes = dataWeaverService.generateExcel(file, month, year);
+    public ResponseEntity<byte[]> generateExcel(@RequestParam("file") MultipartFile file) throws IOException {
+        byte[] outputBytes = dataWeaverService.generateExcel(file);
 
 
         return ResponseEntity.ok()  
