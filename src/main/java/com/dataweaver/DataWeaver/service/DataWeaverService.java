@@ -2,12 +2,14 @@ package com.dataweaver.DataWeaver.service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -34,16 +36,32 @@ import org.springframework.web.multipart.MultipartFile;
 public class DataWeaverService {
 
     public byte[] generateExcel(MultipartFile file) throws IOException {
-       
         Workbook workbook = new XSSFWorkbook(file.getInputStream());
         Sheet sourceSheet = workbook.getSheetAt(0);
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+        // DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
         Cell cell = sourceSheet.getRow(1).getCell(3);
         LocalDate date = LocalDate.parse(cell.toString(), formatter);
 
         int month = date.getMonth().getValue();
         int year = date.getYear();
+
+
+        int rowCount = sourceSheet.getPhysicalNumberOfRows();
+        
+
+        for (int rowIndex = 1; rowIndex < rowCount; rowIndex++) {
+            Cell dateCell = findDateFromSheet(sourceSheet, rowIndex);
+            String inputDate = dateCell.toString();
+            // Todo: convert from V2 to V1 format
+            DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+            LocalDate localDate = LocalDate.parse(inputDate, inputFormatter);
+
+            DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd-MMM-yyyy");
+            String formattedDateStr = localDate.format(outputFormatter);
+            dateCell.setCellValue(formattedDateStr);
+        }
 
         TreeMap<String, Double> employeeNames = findAllEmployeeNames(sourceSheet);
         
@@ -91,7 +109,19 @@ public class DataWeaverService {
             addBorders(currentSheet, style, columns.length);
             applyColour(outputWorkbook, currentSheet, columns.length, 0, IndexedColors.LIGHT_BLUE.getIndex());
             updateWeekendColour(outputWorkbook, currentSheet, columns.length);
+            updateDateFormat(currentSheet);
         } 
+    }
+
+    private void updateDateFormat(Sheet sheet) {
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+        // for (Row row: sheet) {
+        //     Cell dateCell = row.getCell(1);
+
+        //     LocalDate convertedDate = LocalDate.parse(dateCell.toString(), outputFormatter);
+        //     dateCell.setCellValue(convertedDate.toString());
+
+        // }
     }
 
     private void addBorders(Sheet sheet, CellStyle style, int totalColumns) {
@@ -161,6 +191,7 @@ public class DataWeaverService {
             Cell nameCell = row.createCell(0);
             nameCell.setCellValue(name);
             Cell dateCell = row.createCell(1);
+            
             dateCell.setCellValue(date.toString());
             Cell titleCell = row.createCell(2);
 
