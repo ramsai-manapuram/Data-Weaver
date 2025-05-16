@@ -385,10 +385,7 @@ public class DataWeaverService {
                 }
                 String hours = getCellValue(hoursCell);
                 double hoursDouble = findHoursInDouble(hours);
-                // double hours = LocalTime.parse(hoursCell.toString()).getHour();
-                // System.out.println("Hours: " + hours);
-                // double hours = Double.parseDouble(hoursCell.toString());
-                store.put(name, store.getOrDefault(name, 0.0) + 8.0);
+                store.put(name, store.getOrDefault(name, 0.0) + hoursDouble);
                 if (!visited.containsKey(name)) {
                     visited.put(name, new HashSet<>());
                 }
