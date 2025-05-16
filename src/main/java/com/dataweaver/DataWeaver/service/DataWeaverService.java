@@ -247,8 +247,8 @@ public class DataWeaverService {
         return sourceSheet.getRow(rowIndex).getCell(colIndex).toString();
     }
 
-    private Cell findTotalHoursFromSheet(Sheet sourceSheet, int rowIndex) {
-        int colIndex = findColumnIndex(sourceSheet, "Total Hours");
+    private Cell findTaskHoursFromSheet(Sheet sourceSheet, int rowIndex) {
+        int colIndex = findColumnIndex(sourceSheet, "Task Hours");
         return sourceSheet.getRow(rowIndex).getCell(colIndex);
     }
 
@@ -262,46 +262,45 @@ public class DataWeaverService {
             Row row = sourceSheet.getRow(rowIndex);
             if (row == null)    continue;
 
-            int colCount = row.getPhysicalNumberOfCells();
+            String namePresent = findNameFromSheet(sourceSheet, rowIndex);
+            if (!namePresent.equals(name)) {
+                continue;
+            }
 
-            for (int colIndex = 0; colIndex < colCount; colIndex++) {
-                Cell cell = row.getCell(colIndex);
-                if (cell == null)   continue;
+            Cell dateCell = findDateFromSheet(sourceSheet, rowIndex);
+            int getDay = getDayFromDate(dateCell.toString());
+            Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
+            Cell projectTimeCell = destinationSheet.getRow(getDay).getCell(4);
 
-                String namePresent = findNameFromSheet(sourceSheet, rowIndex);
-                if (!namePresent.equals(name)) {
-                    continue;
-                }
+            String existingTask = descriptionCell.toString();
+            String newTask = findDescriptionFromSheet(sourceSheet, rowIndex);
+            StringBuilder token = new StringBuilder(newTask);
+            token.append("#");
+            token.append(Integer.toString(getDay));
 
-                Cell dateCell = findDateFromSheet(sourceSheet, rowIndex);
-                int getDay = getDayFromDate(dateCell.toString());
-                Cell descriptionCell = destinationSheet.getRow(getDay).getCell(3);
-                Cell projectTimeCell = destinationSheet.getRow(getDay).getCell(4);
+            Double existingHours = 0.0;
+            
+            if (existingTask.length() > 0) {
+                existingHours = findHoursInDouble(projectTimeCell.toString());
+            }
+            
 
-                String existingTask = descriptionCell.toString();
-                String newTask = findDescriptionFromSheet(sourceSheet, rowIndex);
-                StringBuilder token = new StringBuilder(newTask);
-                token.append("#");
-                token.append(Integer.toString(getDay));
-                if (allTasks.contains(token.toString())) {
-                    continue;
-                }
-                
+            if (!allTasks.contains(token.toString())) {
                 allTasks.add(token.toString());
-                Double existingHours = 0.0;
                 if (existingTask.length() > 0) {
                     existingTask += ", ";
-                    existingHours += findHoursInDouble(projectTimeCell.toString());
                 }
-                Cell hoursCell = findTotalHoursFromSheet(sourceSheet, rowIndex);
-                String hours = getCellValue(hoursCell);
-                double hoursDouble = findHoursInDouble(hours);
-                existingHours += hoursDouble;
-                projectTimeCell.setCellValue(Double.toString(existingHours));
-
                 existingTask += newTask;
-                descriptionCell.setCellValue(existingTask);
             }
+            
+            
+            
+            Cell hoursCell = findTaskHoursFromSheet(sourceSheet, rowIndex);
+            String hours = getCellValue(hoursCell);
+            double hoursDouble = findHoursInDouble(hours);
+            existingHours += hoursDouble;
+            projectTimeCell.setCellValue(Double.toString(existingHours));
+            descriptionCell.setCellValue(existingTask);
         }
     }
 
