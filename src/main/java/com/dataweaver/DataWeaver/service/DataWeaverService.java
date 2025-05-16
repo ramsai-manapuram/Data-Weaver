@@ -232,6 +232,11 @@ public class DataWeaverService {
         return sourceSheet.getRow(rowIndex).getCell(colIndex).toString();
     }
 
+    private Cell findTotalHoursFromSheet(Sheet sourceSheet, int rowIndex) {
+        int colIndex = findColumnIndex(sourceSheet, "Total Hours");
+        return sourceSheet.getRow(rowIndex).getCell(colIndex);
+    }
+
     private void updateDescriptionAndHours(Sheet sourceSheet, Sheet destinationSheet, String name) {
         boolean isFirstRow = true;
         Set<String> allTasks = new HashSet<>();
@@ -264,11 +269,16 @@ public class DataWeaverService {
                     continue;
                 }
                 allTasks.add(newTask);
+                Double existingHours = 0.0;
                 if (existingTask.length() > 0) {
                     existingTask += ", ";
+                    existingHours += findHoursInDouble(projectTimeCell.toString());
                 }
-
-                projectTimeCell.setCellValue("8");
+                Cell hoursCell = findTotalHoursFromSheet(sourceSheet, rowIndex);
+                String hours = getCellValue(hoursCell);
+                double hoursDouble = findHoursInDouble(hours);
+                existingHours += hoursDouble;
+                projectTimeCell.setCellValue(Double.toString(existingHours));
 
                 existingTask += newTask;
                 descriptionCell.setCellValue(existingTask);
