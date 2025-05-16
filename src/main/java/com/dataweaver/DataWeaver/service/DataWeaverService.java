@@ -113,15 +113,29 @@ public class DataWeaverService {
         } 
     }
 
+    private String convertDateFormat(String dateString) {
+        SimpleDateFormat inputFormat = new SimpleDateFormat("yyyy-MM-dd");
+        SimpleDateFormat outputFormat = new SimpleDateFormat("MMM dd, yyyy");
+        Date date = null;
+        try {
+            date = inputFormat.parse(dateString);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return outputFormat.format(date);
+    }
+
     private void updateDateFormat(Sheet sheet) {
-        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-        // for (Row row: sheet) {
-        //     Cell dateCell = row.getCell(1);
+        boolean isFirstRow = true;
+        for (Row row: sheet) {
+            if (isFirstRow) {
+                isFirstRow = false;
+                continue;
+            }
+            Cell dateCell = row.getCell(1);
+            dateCell.setCellValue(convertDateFormat(dateCell.toString()));
 
-        //     LocalDate convertedDate = LocalDate.parse(dateCell.toString(), outputFormatter);
-        //     dateCell.setCellValue(convertedDate.toString());
-
-        // }
+        }
     }
 
     private void addBorders(Sheet sheet, CellStyle style, int totalColumns) {
@@ -193,6 +207,7 @@ public class DataWeaverService {
             Cell dateCell = row.createCell(1);
             
             dateCell.setCellValue(date.toString());
+
             Cell titleCell = row.createCell(2);
 
             Cell descriptionCell = row.createCell(3);
