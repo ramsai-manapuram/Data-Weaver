@@ -265,10 +265,14 @@ public class DataWeaverService {
 
                 String existingTask = descriptionCell.toString();
                 String newTask = findDescriptionFromSheet(sourceSheet, rowIndex);
-                if (allTasks.contains(newTask)) {
+                StringBuilder token = new StringBuilder(newTask);
+                token.append("#");
+                token.append(Integer.toString(getDay));
+                if (allTasks.contains(token.toString())) {
                     continue;
                 }
-                allTasks.add(newTask);
+                
+                allTasks.add(token.toString());
                 Double existingHours = 0.0;
                 if (existingTask.length() > 0) {
                     existingTask += ", ";
