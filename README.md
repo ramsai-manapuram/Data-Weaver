@@ -42,6 +42,13 @@ Upload a team Excel timesheet to receive processed outputs.
   - One Excel per employee
   - One summary sheet
 
+ ### `GET /data-weaver/health-check`
+
+end point to check the health of the application
+
+- **Request:** No request body
+- **Response:** a string 
+
 ### Swagger UI
 
 View and interact with APIs:
