@@ -14,6 +14,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.dataweaver.DataWeaver.service.DataWeaverService;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
+@Tag(name = "DataWeaver Controller", description = "Handles health checkup and generate-excel end points")
 @RestController
 @RequestMapping("/data-weaver")
 public class DataWeaverController {
@@ -24,6 +28,7 @@ public class DataWeaverController {
         this.dataWeaverService = dataWeaverService;
     }
 
+    @Operation(summary = "Returns back an excel sheet as response", description = "Returns back a polished excel sheet as response by seperating our each person's monthly tasks")
     @PostMapping("/generate-excel")
     public ResponseEntity<byte[]> generateExcel(@RequestParam("file") MultipartFile file) throws IOException {
         byte[] outputBytes = dataWeaverService.generateExcel(file);
@@ -36,6 +41,7 @@ public class DataWeaverController {
     }
 
 
+    @Operation(summary = "Health check end point", description = "Checks whether DataWeaver application is up and healthy or not")
     @GetMapping("/health-check")
     public ResponseEntity<String> healthCheckup() {
         return ResponseEntity.ok()

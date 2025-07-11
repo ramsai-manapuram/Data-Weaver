@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import com.dataweaver.DataWeaver.dto.ErrorResponse;
 
+import io.swagger.v3.oas.annotations.Hidden;
+
+@Hidden
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
